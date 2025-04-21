@@ -28,12 +28,12 @@ namespace smq.Networking {
             Console.WriteLine($"Connected to server at {ip}:{port} with username {username}");
 
             Packet pck = Read();
-            if (pck.PacketId != PacketID.Acknowledge) {
-                Console.WriteLine($"Server sent weird packet {pck.PacketId} on connection");
+            if (pck.PacketId == PacketID.SC_Kick) {
+                Console.WriteLine($"Server kicked client for reason {(KickReason)pck.ReadUInt()}");
                 Client.Close();
                 return;
-            } else if (pck.PacketId == PacketID.SC_Kick) {
-                Console.WriteLine($"Server kicked client for reason {(KickReason)pck.ReadUInt()}");
+            } else if (pck.PacketId != PacketID.Acknowledge) {
+                Console.WriteLine($"Server sent weird packet {pck.PacketId} on connection");
                 Client.Close();
                 return;
             }
@@ -46,12 +46,13 @@ namespace smq.Networking {
             Console.WriteLine($"Sent registration request to server with username {username}");
 
             pck = Read();
-            if (pck.PacketId != PacketID.SC_ResponseRegistration) {
-                Console.WriteLine($"Server sent weird packet {pck.PacketId} on registration");
+            
+            if(pck.PacketId == PacketID.SC_Kick) {
+                Console.WriteLine($"Server kicked client for reason {(KickReason)pck.ReadUInt()}");
                 Client.Close();
                 return;
-            }else if(pck.PacketId == PacketID.SC_Kick) {
-                Console.WriteLine($"Server kicked client for reason {(KickReason)pck.ReadUInt()}");
+            } else if (pck.PacketId != PacketID.SC_ResponseRegistration) {
+                Console.WriteLine($"Server sent weird packet {pck.PacketId} on registration");
                 Client.Close();
                 return;
             }
