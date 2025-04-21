@@ -32,6 +32,10 @@ namespace smq.Networking {
                 Console.WriteLine($"Server sent weird packet {pck.PacketId} on connection");
                 Client.Close();
                 return;
+            } else if (pck.PacketId == PacketID.SC_Kick) {
+                Console.WriteLine($"Server kicked client for reason {(KickReason)pck.ReadUInt()}");
+                Client.Close();
+                return;
             }
             LocalIdentifier = pck.ReadUInt();
             Console.WriteLine($"Server acknowledged connection with identifier {LocalIdentifier}");
@@ -44,6 +48,10 @@ namespace smq.Networking {
             pck = Read();
             if (pck.PacketId != PacketID.SC_ResponseRegistration) {
                 Console.WriteLine($"Server sent weird packet {pck.PacketId} on registration");
+                Client.Close();
+                return;
+            }else if(pck.PacketId == PacketID.SC_Kick) {
+                Console.WriteLine($"Server kicked client for reason {(KickReason)pck.ReadUInt()}");
                 Client.Close();
                 return;
             }
