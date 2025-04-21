@@ -10,7 +10,7 @@ namespace smq{
                 if (Console.ReadLine()! == "server") {
                     Console.Title = "Server";
                     IsServerInstance = true;
-                    NetServer server = new(7070, 1);
+                    NetServer server = new(7070, ushort.Parse(Console.ReadLine()!));
                     server.Start();
                 } else {
                     Console.Title = "Client";
