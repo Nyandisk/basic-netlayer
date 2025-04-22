@@ -1,4 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using System.Net;
+using System.Net.Sockets;
 
 namespace smq.Networking {
     public class NetworkPlayer {
@@ -7,20 +8,24 @@ namespace smq.Networking {
         /// <summary>
         /// Only set on the server instance
         /// </summary>
-        public TcpClient Client { get; }
+        public TcpClient TcpClient { get; }
+        public IPEndPoint? UdpEndpoint { get; }
         /// <summary>
         /// Only set on the server instance
         /// </summary>
-        private readonly NetworkStream _stream;
+        private readonly NetworkStream _tcpStream;
         /// <summary>
         /// Server initializer
         /// </summary>
-        public NetworkPlayer(uint identifier, string username, TcpClient client) {
+        public NetworkPlayer(uint identifier, string username, TcpClient tcpClient, IPEndPoint? udpEndpoint) {
             Identifier = identifier;
             Username = username;
-            Client = client;
-            Client.NoDelay = true;
-            _stream = Client.GetStream();
+            
+            TcpClient = tcpClient;
+            TcpClient.NoDelay = true;
+            _tcpStream = TcpClient.GetStream();
+
+            UdpEndpoint = udpEndpoint;
         }
         /// <summary>
         /// Client initializer
@@ -28,21 +33,42 @@ namespace smq.Networking {
         public NetworkPlayer(uint identifier, string username) {
             Identifier = identifier;
             Username = username;
-            Client = null!;
-            _stream = null!;
+            TcpClient = null!;
+            _tcpStream = null!;
         }
-        public void Send(Packet packet) {
+        public void Send(Packet packet, ProtocolType protocol = ProtocolType.Tcp, NetServer? server = null) {
             if (Program.IsClientInstance) return;
-            Console.WriteLine($"Sending packet {packet.PacketId} to player {Identifier}({Username})");
-            _stream.Write(packet.GetBytes());
+            if (protocol == ProtocolType.Tcp) {
+                _tcpStream.Write(packet.GetBytes());
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine($"[TCP] Sent packet {packet.PacketId} to player {Identifier}({Username})");
+                Console.ResetColor();
+            } else if (protocol == ProtocolType.Udp) {
+                if (server == null) { throw new Exception("Send didn't provide NetServer instance for UDP transmission"); }
+                server.ServerUdp.Send(packet.GetBytes(), UdpEndpoint!);
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine($"[UDP] Sent packet {packet.PacketId} to player {Identifier}({Username})");
+                Console.ResetColor();
+            } else {
+                throw new InvalidOperationException($"Invalid protocol provided {protocol}");
+            }
+            
         }
-        public Packet Read() {
+        public Packet Read(ProtocolType protocol = ProtocolType.Tcp) {
             if (Program.IsClientInstance) {
                 throw new Exception("Client instance cannot read packets from NetworkPlayer container");
             }
-            Packet pck = Packet.FromStream(_stream);
-            Console.WriteLine($"Received packet {pck.PacketId} from player {Identifier}({Username})");
-            return pck;
+            if (protocol == ProtocolType.Tcp) {
+                Packet pck = Packet.FromStream(_tcpStream);
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine($"[TCP] Received packet {pck.PacketId} from player {Identifier}({Username})");
+                Console.ResetColor();
+                return pck;
+            } else if (protocol == ProtocolType.Udp) {
+                throw new InvalidOperationException($"Reading UDP from individual clients cannot be done through Read (NetServer)");
+            } else {
+                throw new InvalidOperationException($"Invalid protocol provided {protocol}");
+            }
         }
     }
 }

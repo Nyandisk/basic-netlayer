@@ -1,8 +1,10 @@
-﻿using System.Net.Sockets;
+﻿using System.Net;
+using System.Net.Sockets;
 
 namespace smq.Networking {
     public class NetServer(ushort port, uint maxConnections) {
         public List<NetworkPlayer> Players { get; } = new();
+        public UdpClient ServerUdp { get; } = new(port) { DontFragment = true };
         public uint MaxConnections { get; set; } = maxConnections;
 
         private readonly PacketRouter _router = new();
@@ -10,7 +12,7 @@ namespace smq.Networking {
         private uint _nextPlayerIdentifier = 0;
 
         public NetworkPlayer? GetPlayer(TcpClient client) {
-            return Players.Where(x => x.Client == client).FirstOrDefault();
+            return Players.Where(x => x.TcpClient == client).FirstOrDefault();
         }
         public void RemovePlayer(NetworkPlayer player) {
             Console.WriteLine($"Removing player {player.Identifier} ({player.Username}) from server");
@@ -31,6 +33,13 @@ namespace smq.Networking {
             SendToAll(notification);
             Players.Add(player);
         }
+        public NetworkPlayer? GetPlayer(IPEndPoint iep) {
+            try {
+                return Players.Where(x => x.UdpEndpoint!.Equals(iep)).FirstOrDefault();
+            } catch {
+                return null;
+            }
+        }
         public void Kick(NetworkPlayer player, KickReason reason, bool removeFromPlayers = true) {
             Console.WriteLine($"Kicking player {player.Identifier} ({player.Username}) for reason: {reason}");
 
@@ -38,13 +47,13 @@ namespace smq.Networking {
             packet.AddData((uint)reason);
             player.Send(packet);
 
-            player.Client.Close();
+            player.TcpClient.Close();
             if (removeFromPlayers) RemovePlayer(player);
         }
-        public void SendToAll(Packet packet) {
+        public void SendToAll(Packet packet, ProtocolType protocol = ProtocolType.Tcp) {
             Console.WriteLine($"Sending packet {packet.PacketId} to all players");
             foreach(NetworkPlayer player in Players) {
-                player.Send(packet);
+                player.Send(packet, protocol, this);
             }
         }
         private void AcceptPlayer(NetworkPlayer player) {
@@ -74,16 +83,60 @@ namespace smq.Networking {
 
             Console.WriteLine($"Player {player.Identifier} ({player.Username}) registered successfully");
             try {
-                while (player.Client.Connected) {
+                while (player.TcpClient.Connected) {
                     Packet packet = player.Read();
                     if (!_router.TryHandle(packet, player)) {
-                        Console.WriteLine($"Packet {packet.PacketId} sent by {player.Identifier} ({player.Username}) does not have a handler");
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.WriteLine($"[TCP] Packet {packet.PacketId} sent by {player.Identifier} ({player.Username}) does not have a handler");
+                        Console.ResetColor();
                     }
                 }
             }catch(Exception ex) {
-                Console.WriteLine($"Exception while reading packet from player {player.Identifier} ({player.Username}): {ex}");
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"[TCP] Exception while reading packet from player {player.Identifier} ({player.Username}): {ex}");
+                Console.ResetColor();
             } finally {
                 RemovePlayer(player);
+            }
+        }
+        private readonly Queue<IPEndPoint> _discoveryQueue = new();
+        private void UdpReceiveThread() {
+            while (true) {
+                IPEndPoint? iep = new(IPAddress.Any, 0);
+                Packet packet;
+                try {
+                    packet = Packet.FromUDP(ServerUdp, ref iep);
+                } catch (Exception ex) {
+                    Console.ForegroundColor = ConsoleColor.DarkGray;
+                    Console.WriteLine($"[UDP] Error parsing packet from {iep}: {ex}");
+                    Console.ResetColor();
+                    continue;
+                }
+                NetworkPlayer? player = GetPlayer(iep!);
+                if (player == null) {
+                    if (packet.PacketId == PacketID.CS_Discovery) {
+                        Console.ForegroundColor = ConsoleColor.DarkGray;
+                        Console.WriteLine($"[UDP] Received discovery packet from {iep!.Address}:{iep!.Port}");
+                        Console.ResetColor();
+                        Packet response = new(PacketID.SC_RespondDiscovery);
+                        ServerUdp.Send(response.GetBytes(), iep!);
+
+                        _discoveryQueue.Enqueue(iep);
+                        continue;
+                    }
+                    Console.ForegroundColor = ConsoleColor.DarkGray;
+                    Console.WriteLine($"[UDP] Received packet {packet.PacketId} from unknown player {iep!.Address}:{iep!.Port}");
+                    Console.ResetColor();
+                    continue;
+                }
+                Console.ForegroundColor = ConsoleColor.DarkGray;
+                Console.WriteLine($"[UDP] Received packet {packet.PacketId} from {iep!.Address}:{iep!.Port}");
+                Console.ResetColor();
+                if (_router.TryHandle(packet, player) != true) {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"[UDP] Packet {packet.PacketId} sent by {player.Identifier} ({player.Username}) does not have a handler");
+                    Console.ResetColor();
+                }
             }
         }
         public void Start() {
@@ -91,12 +144,23 @@ namespace smq.Networking {
                 throw new Exception("Cannot start server on client instance");
             }
             _router.RegisterHandlers();
+
             _listener.Start();
+            Thread udpThread = new(UdpReceiveThread);
+            udpThread.Start();
+
             Console.WriteLine($"Server started");
             while (true) {
                 _nextPlayerIdentifier++;
-                TcpClient client = _listener.AcceptTcpClient();
-                NetworkPlayer player = new(_nextPlayerIdentifier, Guid.NewGuid().ToString(), client);
+                TcpClient tcpClient = _listener.AcceptTcpClient();
+                Console.WriteLine($"Accepted connection from {tcpClient.Client.RemoteEndPoint}\nAwaiting UDP discovery...");
+
+                while (_discoveryQueue.Count == 0) {
+                    Thread.Sleep(50);
+                }
+                IPEndPoint discoveryIep = _discoveryQueue.Dequeue();
+                NetworkPlayer player = new(_nextPlayerIdentifier, Guid.NewGuid().ToString(), tcpClient, discoveryIep);
+
                 Console.WriteLine($"Created temporary NetworkPlayer for client {player.Identifier} ({player.Username})");
 
                 if (Players.Count >= MaxConnections) {

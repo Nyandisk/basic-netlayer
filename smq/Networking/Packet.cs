@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
@@ -8,7 +9,9 @@ namespace smq.Networking {
         Acknowledge = 0x0006,
 
         CS_RequestRegistration = 0x0001,
+        CS_Discovery = 0x0007,
 
+        SC_RespondDiscovery = 0x0008,
         SC_ResponseRegistration = 0x0002,
         SC_Kick = 0x0003,
         SC_NotifyPlayerLeft = 0x0004,
@@ -116,6 +119,21 @@ namespace smq.Networking {
             Buffer.BlockCopy(raw, 2, payload, 0, packetSize - 2);
 
 
+            return new Packet(packetId, payload);
+        }
+        public static Packet FromUDP(UdpClient client, ref IPEndPoint? riep) {
+            IPEndPoint iep = new(IPAddress.Any, 0);
+            Span<byte> bytes = client.Receive(ref iep).AsSpan();
+
+            ushort packetSize = BitConverter.ToUInt16(bytes[..2]);
+            byte[] raw = bytes[2..].ToArray();
+
+            PacketID packetId = (PacketID)BitConverter.ToUInt16(raw, 0);
+
+            byte[] payload = new byte[packetSize - 2];
+            Buffer.BlockCopy(raw, 2, payload, 0, packetSize - 2);
+
+            riep = iep;
             return new Packet(packetId, payload);
         }
     }
