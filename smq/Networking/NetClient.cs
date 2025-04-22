@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 
-namespace smq.Networking {
+namespace Vikinet2.Networking {
     public class NetClient {
         public List<NetworkPlayer> Players { get; } = new();
         public uint LocalIdentifier { get; private set; } = 0;
@@ -11,10 +11,11 @@ namespace smq.Networking {
 
         private NetworkStream _stream;
         private readonly PacketRouter _router = new();
+        public PacketRouter Router => _router;
         private readonly IPEndPoint _serverEndpoint = null!;
 
         public NetClient(string username, string ip, ushort port) {
-            if (!Program.IsClientInstance) {
+            if (!Vikinet2.IsClientInstance) {
                 throw new Exception("Only accessible from client instance");
             }
 
@@ -31,8 +32,6 @@ namespace smq.Networking {
                 UdpClient.Close();
                 return;
             }
-
-            _router.RegisterHandlers();
             Log.Write($"Connected to server at {ip}:{port} with username {username}");
 
             Send(new(PacketID.CS_Discovery), ProtocolType.Udp);
@@ -139,7 +138,7 @@ namespace smq.Networking {
             }
         }
         public Packet Read(ProtocolType protocol = ProtocolType.Tcp) {
-            if (Program.IsServerInstance) {
+            if (Vikinet2.IsServerInstance) {
                 throw new Exception("Server instance cannot read packets from NetClient container");
             }
             if (protocol == ProtocolType.Tcp) {
@@ -151,7 +150,7 @@ namespace smq.Networking {
             }else if(protocol == ProtocolType.Udp) {
                 IPEndPoint? iep = new(IPAddress.Any, 0);
                 Packet pck = Packet.FromUDP(UdpClient, ref iep);
-                if (!iep.Equals(_serverEndpoint)) {
+                if (!iep!.Equals(_serverEndpoint)) {
                     throw new Exception($"[UDP] Received transmission from unknown source");
                 }
                 Console.ForegroundColor = ConsoleColor.DarkGray;
@@ -163,7 +162,7 @@ namespace smq.Networking {
             }
         }
         public void Send(Packet pck, ProtocolType protocol = ProtocolType.Tcp) {
-            if (Program.IsServerInstance) {
+            if (Vikinet2.IsServerInstance) {
                 throw new Exception("Server instance cannot send packets from NetClient container");
             }
             if (protocol == ProtocolType.Tcp) {

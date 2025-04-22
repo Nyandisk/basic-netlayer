@@ -1,7 +1,7 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 
-namespace smq.Networking {
+namespace Vikinet2.Networking {
     public class NetworkPlayer {
         public uint Identifier { get; }
         public string Username { get; set; }
@@ -37,7 +37,7 @@ namespace smq.Networking {
             _tcpStream = null!;
         }
         public void Send(Packet packet, ProtocolType protocol = ProtocolType.Tcp, NetServer? server = null) {
-            if (Program.IsClientInstance) return;
+            if (Vikinet2.IsClientInstance) return;
             if (protocol == ProtocolType.Tcp) {
                 _tcpStream.Write(packet.GetBytes());
                 Console.ForegroundColor = ConsoleColor.DarkGray;
@@ -55,7 +55,7 @@ namespace smq.Networking {
             
         }
         public Packet Read(ProtocolType protocol = ProtocolType.Tcp) {
-            if (Program.IsClientInstance) {
+            if (Vikinet2.IsClientInstance) {
                 throw new Exception("Client instance cannot read packets from NetworkPlayer container");
             }
             if (protocol == ProtocolType.Tcp) {

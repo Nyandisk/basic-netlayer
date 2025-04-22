@@ -1,13 +1,14 @@
 ﻿using System.Net;
 using System.Net.Sockets;
 
-namespace smq.Networking {
+namespace Vikinet2.Networking {
     public class NetServer(ushort port, uint maxConnections) {
         public List<NetworkPlayer> Players { get; } = new();
         public UdpClient ServerUdp { get; } = new(port) { DontFragment = true };
         public uint MaxConnections { get; set; } = maxConnections;
 
         private readonly PacketRouter _router = new();
+        public PacketRouter Router => _router;
         private readonly TcpListener _listener = new(System.Net.IPAddress.Any, port);
         private uint _nextPlayerIdentifier = 0;
 
@@ -140,10 +141,9 @@ namespace smq.Networking {
             }
         }
         public void Start() {
-            if (Program.IsClientInstance) {
+            if (Vikinet2.IsClientInstance) {
                 throw new Exception("Cannot start server on client instance");
             }
-            _router.RegisterHandlers();
 
             _listener.Start();
             Thread udpThread = new(UdpReceiveThread);

@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.13.35931.197
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "smq", "smq\smq.csproj", "{401BBCE5-F06B-42CB-86D3-8763293A2A4E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vikinet2", "smq\Vikinet2.csproj", "{401BBCE5-F06B-42CB-86D3-8763293A2A4E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

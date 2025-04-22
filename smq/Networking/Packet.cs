@@ -3,7 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
-namespace smq.Networking {
+namespace Vikinet2.Networking {
     public enum PacketID {
         Invalid = 0x0000,
         Acknowledge = 0x0006,

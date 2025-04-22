@@ -1,4 +1,4 @@
-﻿namespace smq.Networking {
+﻿namespace Vikinet2.Networking {
     [AttributeUsage(AttributeTargets.Method)]
     public class ServerPacketHandlerAttribute(PacketID packetId) : Attribute {
         public PacketID PacketId { get; } = packetId;
@@ -10,16 +10,7 @@
     }
     public class PacketRouter {
         private readonly Dictionary<PacketID, Action<Packet, NetworkPlayer?>> _handlers = new();
-        public void RegisterHandlers() {
-            Log.Write($"Registering handlers");
-            if (Program.IsServerInstance) {
-                //Register();
-            } else {
-                //Register();
-            }
-            Log.Write($"Registered {_handlers.Count} handlers for {(Program.IsServerInstance ? "server" : "client")}");
-        }
-        private void Register(PacketID id, Action<Packet, NetworkPlayer?> handler) {
+        public void Register(PacketID id, Action<Packet, NetworkPlayer?> handler) {
             if (_handlers.ContainsKey(id)) {
                 throw new Exception($"Handler for packet {id} already registered");
             }
