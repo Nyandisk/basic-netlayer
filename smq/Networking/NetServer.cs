@@ -87,15 +87,11 @@ namespace Vikinet2.Networking {
                 while (player.TcpClient.Connected) {
                     Packet packet = player.Read();
                     if (!_router.TryHandle(packet, player)) {
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Log.Write($"[TCP] Packet {packet.PacketId} sent by {player.Identifier} ({player.Username}) does not have a handler");
-                        Console.ResetColor();
+                        Log.Error($"[TCP] Packet {packet.PacketId} sent by {player.Identifier} ({player.Username}) does not have a handler");
                     }
                 }
             }catch(Exception ex) {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Log.Write($"[TCP] Exception while reading packet from player {player.Identifier} ({player.Username}): {ex}");
-                Console.ResetColor();
+                Log.Error($"[TCP] Exception while reading packet from player {player.Identifier} ({player.Username}): {ex}");
             } finally {
                 RemovePlayer(player);
             }
@@ -108,35 +104,25 @@ namespace Vikinet2.Networking {
                 try {
                     packet = Packet.FromUDP(ServerUdp, ref iep);
                 } catch (Exception ex) {
-                    Console.ForegroundColor = ConsoleColor.DarkGray;
-                    Log.Write($"[UDP] Error parsing packet from {iep}: {ex}");
-                    Console.ResetColor();
+                    Log.Debug($"[UDP] Error parsing packet from {iep}: {ex}");
                     continue;
                 }
                 NetworkPlayer? player = GetPlayer(iep!);
                 if (player == null) {
                     if (packet.PacketId == PacketID.CS_Discovery) {
-                        Console.ForegroundColor = ConsoleColor.DarkGray;
-                        Log.Write($"[UDP] Received discovery packet from {iep!.Address}:{iep!.Port}");
-                        Console.ResetColor();
+                        Log.Debug($"[UDP] Received discovery packet from {iep!.Address}:{iep!.Port}");
                         Packet response = new(PacketID.SC_RespondDiscovery);
                         ServerUdp.Send(response.GetBytes(), iep!);
 
                         _discoveryQueue.Enqueue(iep);
                         continue;
                     }
-                    Console.ForegroundColor = ConsoleColor.DarkGray;
-                    Log.Write($"[UDP] Received packet {packet.PacketId} from unknown player {iep!.Address}:{iep!.Port}");
-                    Console.ResetColor();
+                    Log.Debug($"[UDP] Received packet {packet.PacketId} from unknown player {iep!.Address}:{iep!.Port}");
                     continue;
                 }
-                Console.ForegroundColor = ConsoleColor.DarkGray;
-                Log.Write($"[UDP] Received packet {packet.PacketId} from {iep!.Address}:{iep!.Port}");
-                Console.ResetColor();
+                Log.Debug($"[UDP] Received packet {packet.PacketId} from {iep!.Address}:{iep!.Port}");
                 if (_router.TryHandle(packet, player) != true) {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Log.Write($"[UDP] Packet {packet.PacketId} sent by {player.Identifier} ({player.Username}) does not have a handler");
-                    Console.ResetColor();
+                    Log.Error($"[UDP] Packet {packet.PacketId} sent by {player.Identifier} ({player.Username}) does not have a handler");
                 }
             }
         }

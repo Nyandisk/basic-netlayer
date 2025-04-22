@@ -103,15 +103,11 @@ namespace Vikinet2.Networking {
                 while (TcpClient.Connected) {
                     Packet packet = Read();
                     if (!_router.TryHandle(packet, null)) {
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Log.Write($"[TCP] Packet {packet.PacketId} sent by server does not have a handler");
-                        Console.ResetColor();
+                        Log.Error($"[TCP] Packet {packet.PacketId} sent by server does not have a handler");
                     }
                 }
             } catch (Exception ex) {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Log.Write($"[TCP] Exception while reading packet from server: {ex}");
-                Console.ResetColor();
+                Log.Error($"[TCP] Exception while reading packet from server: {ex}");
             } finally {
                 TcpClient.Close();
                 UdpClient.Close();
@@ -123,15 +119,11 @@ namespace Vikinet2.Networking {
                     // Packet packet = Read();
                     Packet packet = Read(ProtocolType.Udp);
                     if (!_router.TryHandle(packet, null)) {
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Log.Write($"[UDP] Packet {packet.PacketId} sent by server does not have a handler");
-                        Console.ResetColor();
+                        Log.Error($"[UDP] Packet {packet.PacketId} sent by server does not have a handler");
                     }
                 }
             } catch (Exception ex) {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Log.Write($"[UDP] Exception while reading packet from server: {ex}");
-                Console.ResetColor();
+                Log.Error($"[UDP] Exception while reading packet from server: {ex}");
             } finally {
                 TcpClient.Close();
                 UdpClient.Close();
@@ -143,19 +135,17 @@ namespace Vikinet2.Networking {
             }
             if (protocol == ProtocolType.Tcp) {
                 Packet pck = Packet.FromStream(_stream);
-                Console.ForegroundColor = ConsoleColor.DarkGray;
-                Log.Write($"[TCP] Received packet {pck.PacketId} from server");
-                Console.ResetColor();
+
+                Log.Debug($"[TCP] Received packet {pck.PacketId} from server");
                 return pck;
             }else if(protocol == ProtocolType.Udp) {
                 IPEndPoint? iep = new(IPAddress.Any, 0);
                 Packet pck = Packet.FromUDP(UdpClient, ref iep);
                 if (!iep!.Equals(_serverEndpoint)) {
-                    throw new Exception($"[UDP] Received transmission from unknown source");
+                    Log.Error($"[UDP] Received transmission from unknown source");
+                    return new(PacketID.Invalid);
                 }
-                Console.ForegroundColor = ConsoleColor.DarkGray;
-                Log.Write($"[UDP] Received packet {pck.PacketId} from server");
-                Console.ResetColor();
+                Log.Debug($"[UDP] Received packet {pck.PacketId} from server");
                 return pck;
             } else {
                 throw new InvalidOperationException($"Invalid protocol provided {protocol}");
@@ -167,14 +157,10 @@ namespace Vikinet2.Networking {
             }
             if (protocol == ProtocolType.Tcp) {
                 _stream.Write(pck.GetBytes());
-                Console.ForegroundColor = ConsoleColor.DarkGray;
-                Log.Write($"[TCP] Sent packet {pck.PacketId} to server");
-                Console.ResetColor();
+                Log.Debug($"[TCP] Sent packet {pck.PacketId} to server");
             } else if (protocol == ProtocolType.Udp) {
                 UdpClient.Send(pck.GetBytes());
-                Console.ForegroundColor = ConsoleColor.DarkGray;
-                Log.Write($"[UDP] Sent packet {pck.PacketId} to server");
-                Console.ResetColor();
+                Log.Debug($"[UDP] Sent packet {pck.PacketId} to server");
             } else {
                 throw new InvalidOperationException($"Invalid protocol provided {protocol}");
             }
