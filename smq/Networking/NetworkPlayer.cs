@@ -41,13 +41,13 @@ namespace smq.Networking {
             if (protocol == ProtocolType.Tcp) {
                 _tcpStream.Write(packet.GetBytes());
                 Console.ForegroundColor = ConsoleColor.DarkGray;
-                Console.WriteLine($"[TCP] Sent packet {packet.PacketId} to player {Identifier}({Username})");
+                Log.Write($"[TCP] Sent packet {packet.PacketId} to player {Identifier}({Username})");
                 Console.ResetColor();
             } else if (protocol == ProtocolType.Udp) {
                 if (server == null) { throw new Exception("Send didn't provide NetServer instance for UDP transmission"); }
                 server.ServerUdp.Send(packet.GetBytes(), UdpEndpoint!);
                 Console.ForegroundColor = ConsoleColor.DarkGray;
-                Console.WriteLine($"[UDP] Sent packet {packet.PacketId} to player {Identifier}({Username})");
+                Log.Write($"[UDP] Sent packet {packet.PacketId} to player {Identifier}({Username})");
                 Console.ResetColor();
             } else {
                 throw new InvalidOperationException($"Invalid protocol provided {protocol}");
@@ -61,7 +61,7 @@ namespace smq.Networking {
             if (protocol == ProtocolType.Tcp) {
                 Packet pck = Packet.FromStream(_tcpStream);
                 Console.ForegroundColor = ConsoleColor.DarkGray;
-                Console.WriteLine($"[TCP] Received packet {pck.PacketId} from player {Identifier}({Username})");
+                Log.Write($"[TCP] Received packet {pck.PacketId} from player {Identifier}({Username})");
                 Console.ResetColor();
                 return pck;
             } else if (protocol == ProtocolType.Udp) {

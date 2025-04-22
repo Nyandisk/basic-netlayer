@@ -11,13 +11,13 @@
     public class PacketRouter {
         private readonly Dictionary<PacketID, Action<Packet, NetworkPlayer?>> _handlers = new();
         public void RegisterHandlers() {
-            Console.WriteLine($"Registering handlers");
+            Log.Write($"Registering handlers");
             if (Program.IsServerInstance) {
                 //Register();
             } else {
                 //Register();
             }
-            Console.WriteLine($"Registered {_handlers.Count} handlers for {(Program.IsServerInstance ? "server" : "client")}");
+            Log.Write($"Registered {_handlers.Count} handlers for {(Program.IsServerInstance ? "server" : "client")}");
         }
         private void Register(PacketID id, Action<Packet, NetworkPlayer?> handler) {
             if (_handlers.ContainsKey(id)) {

@@ -21,7 +21,8 @@ namespace smq.Networking {
         public PacketID PacketId { get; set; } = packetId;
         private readonly List<byte> _data = new();
         private int _offset = 0;
-
+        private const byte MAGIC_1 = 0x5A;
+        private const byte MAGIC_2 = 0xC3;
         public Packet(PacketID packetId, string data) : this(packetId) {
             AddData(data);
         }
@@ -33,24 +34,12 @@ namespace smq.Networking {
             _data.AddRange(BitConverter.GetBytes((ushort)bytes.Length));
             _data.AddRange(bytes);
         }
-        public void AddData(int value) {
-            _data.AddRange(BitConverter.GetBytes(value));
-        }
-        public void AddData(uint value) {
-            _data.AddRange(BitConverter.GetBytes(value));
-        }
-        public void AddData(float value) {
-            _data.AddRange(BitConverter.GetBytes(value));
-        }
-        public void AddData(double value) {
-            _data.AddRange(BitConverter.GetBytes(value));
-        }
-        public void AddData(bool value) {
-            _data.Add((byte)(value ? 1 : 0));
-        }
-        public void AddData(byte value) {
-            _data.Add(value);
-        }
+        public void AddData(int value) => _data.AddRange(BitConverter.GetBytes(value));
+        public void AddData(uint value) => _data.AddRange(BitConverter.GetBytes(value));
+        public void AddData(float value) => _data.AddRange(BitConverter.GetBytes(value));
+        public void AddData(double value) => _data.AddRange(BitConverter.GetBytes(value));
+        public void AddData(bool value) => _data.Add((byte)(value ? 1 : 0));
+        public void AddData(byte value) => _data.Add(value);
 
         public string ReadString() {
             ushort length = BitConverter.ToUInt16(_data.ToArray(), _offset);
@@ -100,38 +89,54 @@ namespace smq.Networking {
         }
         public byte[] GetBytes() {
             byte[] raw = GetRawData().ToArray();
-            byte[] packet = new byte[sizeof(ushort) + raw.Length];
-            BitConverter.GetBytes((ushort)raw.Length).CopyTo(packet, 0);
-            raw.CopyTo(packet, 2);
+            byte[] packet = new byte[2 + sizeof(ushort) + raw.Length];
+            packet[0] = MAGIC_1;
+            packet[1] = MAGIC_2;
+            BitConverter.GetBytes((ushort)raw.Length).CopyTo(packet, 2);
+            raw.CopyTo(packet, 4);
             return packet;
         }
         public static Packet FromStream(NetworkStream stream) {
-            Span<byte> bytes = stackalloc byte[2];
-            stream.ReadExactly(bytes);
+            Span<byte> header = stackalloc byte[4];
+            stream.ReadExactly(header);
 
-            ushort packetSize = BitConverter.ToUInt16(bytes);
+            if (header[0] != MAGIC_1 || header[1] != MAGIC_2) {
+                throw new InvalidDataException("[TCP] Magic bytes mismatch");
+            }
+
+            ushort packetSize = BitConverter.ToUInt16(header.Slice(2, 2));
+            if (packetSize < 2) {
+                throw new InvalidDataException("[TCP] Invalid packet size");
+            }
+
             byte[] raw = new byte[packetSize];
             stream.ReadExactly(raw);
 
             PacketID packetId = (PacketID)BitConverter.ToUInt16(raw, 0);
-
             byte[] payload = new byte[packetSize - 2];
-            Buffer.BlockCopy(raw, 2, payload, 0, packetSize - 2);
-
+            Buffer.BlockCopy(raw, 2, payload, 0, payload.Length);
 
             return new Packet(packetId, payload);
         }
+
         public static Packet FromUDP(UdpClient client, ref IPEndPoint? riep) {
             IPEndPoint iep = new(IPAddress.Any, 0);
-            Span<byte> bytes = client.Receive(ref iep).AsSpan();
+            byte[] received = client.Receive(ref iep);
 
-            ushort packetSize = BitConverter.ToUInt16(bytes[..2]);
-            byte[] raw = bytes[2..].ToArray();
+            if (received.Length < 6)
+                throw new InvalidDataException("[UDP] Packet too short");
 
+            if (received[0] != MAGIC_1 || received[1] != MAGIC_2)
+                throw new InvalidDataException("[UDP] Magic bytes mismatch");
+
+            ushort packetSize = BitConverter.ToUInt16(received, 2);
+            if (packetSize + 4 != received.Length)
+                throw new InvalidDataException("[UDP] Packet size mismatch");
+
+            byte[] raw = received[4..];
             PacketID packetId = (PacketID)BitConverter.ToUInt16(raw, 0);
-
             byte[] payload = new byte[packetSize - 2];
-            Buffer.BlockCopy(raw, 2, payload, 0, packetSize - 2);
+            Buffer.BlockCopy(raw, 2, payload, 0, payload.Length);
 
             riep = iep;
             return new Packet(packetId, payload);
