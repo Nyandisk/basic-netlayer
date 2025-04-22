@@ -127,7 +127,7 @@ namespace Vikinet2.Networking {
             }
         }
         public void Start() {
-            if (Vikinet2.IsClientInstance) {
+            if (Vikinet.IsClientInstance) {
                 throw new Exception("Cannot start server on client instance");
             }
 

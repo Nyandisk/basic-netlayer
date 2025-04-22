@@ -15,7 +15,7 @@ namespace Vikinet2.Networking {
         private readonly IPEndPoint _serverEndpoint = null!;
 
         public NetClient(string username, string ip, ushort port) {
-            if (!Vikinet2.IsClientInstance) {
+            if (!Vikinet.IsClientInstance) {
                 throw new Exception("Only accessible from client instance");
             }
 
@@ -130,7 +130,7 @@ namespace Vikinet2.Networking {
             }
         }
         public Packet Read(ProtocolType protocol = ProtocolType.Tcp) {
-            if (Vikinet2.IsServerInstance) {
+            if (Vikinet.IsServerInstance) {
                 throw new Exception("Server instance cannot read packets from NetClient container");
             }
             if (protocol == ProtocolType.Tcp) {
@@ -152,7 +152,7 @@ namespace Vikinet2.Networking {
             }
         }
         public void Send(Packet pck, ProtocolType protocol = ProtocolType.Tcp) {
-            if (Vikinet2.IsServerInstance) {
+            if (Vikinet.IsServerInstance) {
                 throw new Exception("Server instance cannot send packets from NetClient container");
             }
             if (protocol == ProtocolType.Tcp) {

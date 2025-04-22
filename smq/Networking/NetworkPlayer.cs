@@ -37,7 +37,7 @@ namespace Vikinet2.Networking {
             _tcpStream = null!;
         }
         public void Send(Packet packet, ProtocolType protocol = ProtocolType.Tcp, NetServer? server = null) {
-            if (Vikinet2.IsClientInstance) return;
+            if (Vikinet.IsClientInstance) return;
             if (protocol == ProtocolType.Tcp) {
                 _tcpStream.Write(packet.GetBytes());
                 Log.Debug($"[TCP] Sent packet {packet.PacketId} to player {Identifier}({Username})");
@@ -51,7 +51,7 @@ namespace Vikinet2.Networking {
             
         }
         public Packet Read(ProtocolType protocol = ProtocolType.Tcp) {
-            if (Vikinet2.IsClientInstance) {
+            if (Vikinet.IsClientInstance) {
                 throw new Exception("Client instance cannot read packets from NetworkPlayer container");
             }
             if (protocol == ProtocolType.Tcp) {

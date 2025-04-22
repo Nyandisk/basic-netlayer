@@ -1,7 +1,7 @@
 ﻿using Vikinet2.Networking;
 
 namespace Vikinet2{
-    public class Vikinet2{
+    public class Vikinet{
         // technically could be made constant for like, different builds such as dedicated server and client
         public static bool IsServerInstance { get; private set; } = false;
         public static bool IsClientInstance { get; private set; } = false;
