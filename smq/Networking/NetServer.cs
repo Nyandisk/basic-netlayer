@@ -153,7 +153,7 @@ namespace smq.Networking {
             while (true) {
                 _nextPlayerIdentifier++;
                 TcpClient tcpClient = _listener.AcceptTcpClient();
-                Log.Write($"Accepted connection from {tcpClient.Client.RemoteEndPoint}\nAwaiting UDP discovery...");
+                Log.Write($"Accepted connection from {tcpClient.Client.RemoteEndPoint}. Awaiting UDP discovery...");
 
                 while (_discoveryQueue.Count == 0) {
                     Thread.Sleep(50);
