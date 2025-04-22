@@ -4,6 +4,11 @@ using System.Net.Sockets;
 using System.Text;
 
 namespace Vikinet2.Networking {
+    /// <summary>
+    /// Packet IDs used for communication
+    /// Feel free to expand this enum for your own needs
+    /// In fact, please do
+    /// </summary>
     public enum PacketID {
         Invalid = 0x0000,
         Acknowledge = 0x0006,

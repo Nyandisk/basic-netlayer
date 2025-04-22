@@ -3,21 +3,47 @@ using System.Net.Sockets;
 
 namespace Vikinet2.Networking {
     public class NetClient {
+        /// <summary>
+        /// List of players connected to the server
+        /// Doesn't update automatically by default, route through PacketRouter
+        /// </summary>
         public List<NetworkPlayer> Players { get; } = new();
+        /// <summary>
+        /// Local identifier of the client, set by the server
+        /// </summary>
         public uint LocalIdentifier { get; private set; } = 0;
+        /// <summary>
+        /// Local username of the client, set by the client
+        /// </summary>
         public string LocalUsername { get; private set; } = string.Empty;
         public TcpClient TcpClient { get; }
         public UdpClient UdpClient { get; }
 
         private NetworkStream _stream;
         private readonly PacketRouter _router = new();
+        /// <summary>
+        /// PacketRouter instance, used to route packets to handlers
+        /// Feel free to add your own handlers by calling Register
+        /// </summary>
         public PacketRouter Router => _router;
         private readonly IPEndPoint _serverEndpoint = null!;
-
+        /// <summary>
+        /// Creates a client instance and connects to the server, following through with preset handshake
+        /// </summary>
+        /// <param name="username">Username to use</param>
+        /// <param name="ip">IP to connect to</param>
+        /// <param name="port">Port to connect to</param>
+        /// <exception cref="Exception">Thrown if IsClientInstance is false</exception>
         public NetClient(string username, string ip, ushort port) {
             if (!Vikinet.IsClientInstance) {
                 throw new Exception("Only accessible from client instance");
             }
+            // Handshake diagram:
+            // [Client] -> [Server] : CS_Discovery
+            // [Server] -> [Client] : SC_RespondDiscovery
+            // [Client] -> [Server] : CS_RequestRegistration
+            // [Server] -> [Client] : SC_ResponseRegistration
+            // [Server] -> [Other Clients] : SC_NotifyPlayerJoined
 
             LocalUsername = username;
             TcpClient = new(ip, port) { NoDelay = true };
@@ -78,6 +104,11 @@ namespace Vikinet2.Networking {
                 return;
             }
 
+            // Player strings are sent in the following format:
+            //
+            // 0x0001@username|0x0002@username|0x0003@username
+            //
+            // where 0x0001 is the identifier of the player and username is the username of the player
             string[] playerStrings = pck.ReadString().Split('|');
             foreach(string playerString in playerStrings) {
                 string[] playerData = playerString.Split('@');
@@ -103,6 +134,7 @@ namespace Vikinet2.Networking {
                 while (TcpClient.Connected) {
                     Packet packet = Read();
                     if (!_router.TryHandle(packet, null)) {
+                        // shouldn't be too big of a problem, but still
                         Log.Error($"[TCP] Packet {packet.PacketId} sent by server does not have a handler");
                     }
                 }
@@ -119,6 +151,7 @@ namespace Vikinet2.Networking {
                     // Packet packet = Read();
                     Packet packet = Read(ProtocolType.Udp);
                     if (!_router.TryHandle(packet, null)) {
+                        // shouldn't be too big of a problem, but still
                         Log.Error($"[UDP] Packet {packet.PacketId} sent by server does not have a handler");
                     }
                 }
@@ -129,6 +162,13 @@ namespace Vikinet2.Networking {
                 UdpClient.Close();
             }
         }
+        /// <summary>
+        /// Read a singular packet from the server on the specified protocol
+        /// </summary>
+        /// <param name="protocol">Protocol to read from, TCP or UDP</param>
+        /// <returns>Packet instance</returns>
+        /// <exception cref="Exception">Thrown if called from server, since this is a client</exception>
+        /// <exception cref="InvalidOperationException"></exception>
         public Packet Read(ProtocolType protocol = ProtocolType.Tcp) {
             if (Vikinet.IsServerInstance) {
                 throw new Exception("Server instance cannot read packets from NetClient container");
@@ -151,6 +191,13 @@ namespace Vikinet2.Networking {
                 throw new InvalidOperationException($"Invalid protocol provided {protocol}");
             }
         }
+        /// <summary>
+        /// Send a packet to the server on the specified protocol
+        /// </summary>
+        /// <param name="pck">Packet to send</param>
+        /// <param name="protocol">Protocol to send on</param>
+        /// <exception cref="Exception">Thrown if called from server, since this is a client</exception>
+        /// <exception cref="InvalidOperationException"></exception>
         public void Send(Packet pck, ProtocolType protocol = ProtocolType.Tcp) {
             if (Vikinet.IsServerInstance) {
                 throw new Exception("Server instance cannot send packets from NetClient container");
