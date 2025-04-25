@@ -1,4 +1,4 @@
-# Basic networking layer
+# vikinet2
 A C# library to simplify TCP and UDP network traffic, for games or whatever else you may need.
 I probably wont focus on updating this repo too much, considering the purpose of this is just to avoid rewriting the entire networking stack again.
 
