@@ -51,13 +51,6 @@ namespace Vikinet2.Networking {
             _serverEndpoint = new(IPAddress.Parse(ip), port);
 
             _stream = TcpClient.GetStream();
-
-            if (string.IsNullOrEmpty(username) || username.Length < 3 || username.Length > 20) {
-                Log.Write($"Invalid username {username} (must be between 3 and 20 characters long)");
-                TcpClient.Close();
-                UdpClient.Close();
-                return;
-            }
             Log.Write($"Connected to server at {ip}:{port} with username {username}");
 
             Send(new(PacketID.CS_Discovery), ProtocolType.Udp);
