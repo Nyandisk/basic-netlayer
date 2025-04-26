@@ -9,3 +9,5 @@ The project is configured to be a DLL by default, however feel very, very free t
 # Things that need to be added !! (At least from what I've noticed so far)
  - GetPlayer by identifier
  - GetPlayer functions on NetClient instead of only NetServer
+ - GetPlayer by username
+ - Detach the loop inside NetServer.Start, so that Start doesn't also mean "Run"
